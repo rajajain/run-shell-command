@@ -19,11 +19,17 @@ public class Server {
     }
 
     private void serviceRequest() {
-        System.out.println("-------- Starting the server ----------");
+        System.out.println("-------- Starting the server on port----------" + PORT + "------------");
         try {
             ServerSocket serverSocket = new ServerSocket(PORT, BACKLOG, InetAddress.getByName(HOST));
+            System.out.println("-------- Started the server on port----------" + PORT + "------------");
             while (true) {
-                new Thread(new ExecuteShellCommandWorker(serverSocket.accept())).start();
+                try {
+
+                    new Thread(new ExecuteShellCommandWorker(serverSocket.accept())).start();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
         } catch (IOException e) {
             e.printStackTrace();
