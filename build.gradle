@@ -1,0 +1,125 @@
+apply plugin: 'java'
+sourceCompatibility = 1.8
+version = '1.0'
+
+
+def environment = System.properties['env']
+
+def resourceDir = "config/dev"
+sourceSets {
+    main.java.srcDir "src/main/java"
+    main.resources.srcDir resourceDir
+
+}
+
+
+
+apply plugin: 'maven'
+apply plugin: 'idea'
+apply plugin: 'spring-boot'
+apply plugin: "io.spring.dependency-management"
+apply plugin: 'application'
+
+
+buildscript {
+    repositories {
+        mavenLocal()
+        mavenCentral()
+    }
+    dependencies {
+        classpath("org.springframework.boot:spring-boot-gradle-plugin:1.3.0.RELEASE")
+    }
+}
+
+repositories {
+    mavenLocal()
+    jcenter()
+    maven { url "http://repo.spring.io/snapshot" }
+    maven { url "http://repo.spring.io/milestone" }
+    mavenCentral()
+}
+
+dependencies {
+    compile("com.googlecode.json-simple:json-simple:1.1.1")
+    compile("com.google.code.gson:gson:2.3.1")
+    compile group: 'commons-io', name: 'commons-io', version: '2.4'
+    compile("org.springframework.boot:spring-boot-starter-web:1.3.0.RELEASE") {
+        exclude module: "spring-boot-starter-tomcat"
+        exclude module: "servlet-api"
+        exclude module: "spring-web"
+        exclude module: "spring-webmvc"
+        exclude module: "validation-api"
+        exclude module: "tomcat-embed-el"
+        exclude module: "spring-core"
+        exclude module: "spring-context"
+        exclude module: "spring-aop"
+        exclude module: "jboss-logging"
+        exclude module: "hibernate-validator"
+        exclude module: "jul-to-slf4j"
+        exclude module: "classmate"
+        exclude module: "jcl-over-slf4j"
+        exclude module: "snakeyaml"
+        exclude module: "spring-boot-validation"
+        exclude module: "jackson-core"
+        exclude module: "jackson-databind"
+
+    }
+}
+configurations.all {
+    exclude module: 'hamcrest-core'
+}
+
+artifacts {
+    archives jar
+}
+
+task listJars << {
+    configurations.compile.each { File file -> println file.name }
+}
+
+def getClasspathStringJars() {
+    def baseFolder = ""
+    def fileNames = []
+    configurations.compile.each { File file -> fileNames.add(baseFolder + file.name) }
+
+    def classpath = fileNames.join(";")
+    return classpath
+}
+
+jar {
+    def classpath = '. ; ' + getClasspathStringJars() + ' ; '
+    manifest.attributes('Implementation-Title': 'run-shell-command',
+            'Implementation-Version': version,
+            'Main-Class': 'com.dev.factory.Server',
+            'Class-Path': classpath)
+
+}
+
+task start(type: JavaExec, dependsOn: classes) {
+    main 'com.dev.factory.Server'
+    classpath sourceSets.main.runtimeClasspath
+    args '-jar', "$jar.archivePath"
+    applicationDefaultJvmArgs = [
+            " -Dlogback.configurationFile=" + resourceDir + "/logback.xml" + " -agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005"
+                    + "-Xms6g -Xmx6g -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -verbose:gc -XX:+PrintClassHistogram -XX:+PrintTenuringDistribution -XX:+PrintGCApplicationStoppedTime -Xloggc:/mnt/logs/gc.log -XX:+UseGCLogFileRotation -XX:NumberOfGCLogFiles=10 -XX:GCLogFileSize=100M -XX:+HeapDumpOnOutOfMemoryError -XX:+DisableExplicitGC -XX:+UseParNewGC -XX:+UseConcMarkSweepGC -XX:+CMSParallelRemarkEnabled -XX:+UseCMSInitiatingOccupancyOnly -XX:CMSInitiatingOccupancyFraction=75 -XX:+CMSClassUnloadingEnabled -Dfile.encoding=UTF-8"
+    ]
+}
+task startServer(type: Exec, dependsOn: jar) {
+
+    executable 'java'
+    args '-jar', "$jar.archivePath"
+
+}
+
+applicationDefaultJvmArgs = [
+        "-Denv=qa -Dlogback.configurationFile=" + resourceDir + "/logback.xml -agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005"
+                + "-Xms6g -Xmx6g -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -verbose:gc -XX:+PrintClassHistogram -XX:+PrintTenuringDistribution -XX:+PrintGCApplicationStoppedTime -Xloggc:/mnt/logs/gc.log -XX:+UseGCLogFileRotation -XX:NumberOfGCLogFiles=10 -XX:GCLogFileSize=100M -XX:+HeapDumpOnOutOfMemoryError -XX:+DisableExplicitGC -XX:+UseParNewGC -XX:+UseConcMarkSweepGC -XX:+CMSParallelRemarkEnabled -XX:+UseCMSInitiatingOccupancyOnly -XX:CMSInitiatingOccupancyFraction=75 -XX:+CMSClassUnloadingEnabled -Dfile.encoding=UTF-8"
+]
+
+idea {
+
+    module {
+        downloadJavadoc = false
+        downloadSources = true
+    }
+}
